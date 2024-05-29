@@ -6,12 +6,11 @@ This project is a simple CRUD API for managing a collection of books. It provide
 
 1. Clone the repository:
    `git clone git@github.com:Mohanned-sameh/book-crud-api.git`
-
 2. Install dependencies:
    `npm install`
-
-3. Start the server:
-   `node app.js`
+3. Set up environment variables:
+   Create a `.env` file in the root directory and define the `PORT` variable.
+   `ex: PORT=3000`
 
 ## Usage
 
@@ -51,14 +50,21 @@ This project is a simple CRUD API for managing a collection of books. It provide
 
 - `app.js`: Main entry point for the application.
 - `routes/books.js`: Contains routes for the books endpoint.
+- `controller/bookController.js`: Controller for handling book-related logic.
 - `db/connect.js`: Connects to the SQLite database and creates a table if it doesn't exist.
+- `.env`: Environment variables configuration file.
 
 ## Dependencies
 
 - `express`: Fast, unopinionated, minimalist web framework for Node.js.
 - `body-parser`: Parse incoming request bodies in a middleware before handlers.
-- `sqlite3`: Asynchronous, non-blocking SQLite3 bindings for Node.js.
+- `compression`: Node.js compression middleware.
+- `dotenv`: Loads environment variables from a `.env` file into `process.env`.
 
 ## Contributing
 
 Contributions are welcome! Please feel free to open issues or submit pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
