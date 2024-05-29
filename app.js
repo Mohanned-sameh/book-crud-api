@@ -2,11 +2,12 @@
 const express = require('express');
 const bodyparser = require('body-parser');
 const compression = require('compression');
-const dotenv = require('dotenv');
+
+// Load the environment variables
+require('dotenv').config();
 
 // Create an express application
 const app = express();
-dotenv.config();
 
 // Define the port number
 const port = process.env.PORT || 3000;
@@ -25,5 +26,5 @@ app.use(compression());
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+  console.log(`listening at http://localhost:${port}`);
 });
