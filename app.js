@@ -1,6 +1,7 @@
 // Purpose: Main entry point for the application
 const express = require('express');
 const bodyparser = require('body-parser');
+const compression = require('compression');
 
 // Create an express application
 const app = express();
@@ -16,6 +17,9 @@ app.use(express.json());
 
 // Define the routes
 app.use('/books', require('./routes/books'));
+
+// Define the middleware
+app.use(compression());
 
 // Start the server
 app.listen(port, () => {

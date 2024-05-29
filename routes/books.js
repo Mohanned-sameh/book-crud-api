@@ -22,7 +22,6 @@ express.get('/', (req, res) => {
   // Execute the query
   db.all(sql, params, (err, rows) => {
     if (err) res.status(500).send(err.message);
-
     res.json(rows);
   });
 });
@@ -31,20 +30,19 @@ express.post('/', (req, res) => {
   // Add a new book to the database
   const { title, author, genre, publicationYear } = req.body;
 
-  // Check if all required fields are provided
+  // Check if the required fields are provided
   if (!title || !author || !genre || !publicationYear)
     res.status(400).send('Missing required fields');
 
-  // Insert the new book into the database
+  // Insert the book into the database
   db.run(
     'INSERT INTO books (title, author, genre, publicationYear) VALUES (?, ?, ?, ?)',
     [title, author, genre, publicationYear],
     (err) => {
       if (err) res.status(500).send(err.message);
-
-      res.status(201).send('Book added to database');
     }
   );
+  res.send('Book added');
 });
 
 express.get('/:id', (req, res) => {
@@ -68,6 +66,10 @@ express.put('/:id', (req, res) => {
   // Check if the ID is a number
   const { title, author, genre, publicationYear } = req.body;
 
+  // Check if any fields were provided
+  if (!title && !author && !genre && !publicationYear)
+    res.status(400).send('No valid fields to update');
+
   if (title) db.run('UPDATE books SET title = ? WHERE id = ?', [title, id]);
   if (author) db.run('UPDATE books SET author = ? WHERE id = ?', [author, id]);
   if (genre) db.run('UPDATE books SET genre = ? WHERE id = ?', [genre, id]);
@@ -76,10 +78,6 @@ express.put('/:id', (req, res) => {
       publicationYear,
       id,
     ]);
-
-  // Check if any fields were provided
-  if (!title && !author && !genre && !publicationYear)
-    res.status(400).send('No valid fields to update');
 
   res.send('Book updated');
 });
@@ -94,9 +92,8 @@ express.delete('/:id', (req, res) => {
   // Delete the book from the database
   db.run('DELETE FROM books WHERE id = ?', [id], (err) => {
     if (err) res.status(500).send(err.message);
-
-    res.send('Book deleted');
   });
+  res.send('Book deleted');
 });
 
 // Export the express router
