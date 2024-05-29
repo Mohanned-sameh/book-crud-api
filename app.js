@@ -2,12 +2,14 @@
 const express = require('express');
 const bodyparser = require('body-parser');
 const compression = require('compression');
+const dotenv = require('dotenv');
 
 // Create an express application
 const app = express();
+dotenv.config();
 
 // Define the port number
-const port = process.env.PORT | 3000;
+const port = process.env.PORT || 3000;
 
 // Define the middleware
 app.use(bodyparser.urlencoded({ extended: false }));
