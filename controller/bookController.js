@@ -73,13 +73,27 @@ exports.getBook = (req, res) => {
 // Update a specific book in the database
 exports.updateBook = (req, res) => {
   const { id } = req.params;
-  const { title, author, genre, publicationYear } = req.body;
+  const { title, author, genre, publicationYear, bookCover } = req.body;
 
   if (isNaN(id)) res.status(400).send('Invalid ID');
 
+  const storage = multer.diskStorage({
+    destination: './public/images',
+    filename: (req, file, cb) => {
+      cb(
+        null,
+        file.fieldname + '-' + Date.now() + path.extname(file.originalname)
+      );
+    },
+  });
+
+  const upload = multer({
+    storage: storage,
+  }).single('bookCover');
+
   db.run(
-    'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
-    [title, author, genre, publicationYear, id],
+    'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ?, bookCover = ? WHERE id = ?',
+    [title, author, genre, publicationYear, bookCover, id],
     (err) => {
       if (err) res.status(500).send(err.message);
     }
