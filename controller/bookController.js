@@ -1,4 +1,6 @@
 const db = require('../db/connect');
+const multer = require('multer');
+const path = require('path');
 
 // Get all books from the database
 exports.getBooks = (req, res) => {
@@ -23,14 +25,32 @@ exports.getBooks = (req, res) => {
 
 // Add a new book to the database
 exports.addBook = (req, res) => {
-  const { title, author, genre, publicationYear } = req.body;
+  const { title, author, genre, publicationYear, bookCover } = req.body;
 
-  if (!title || !author || !genre || !publicationYear)
+  if (!title || !author || !genre || !publicationYear || !bookCover)
     res.status(400).send('Missing required fields');
 
+  const storage = multer.diskStorage({
+    destination: './public/images',
+    filename: (req, file, cb) => {
+      cb(
+        null,
+        file.fieldname + '-' + Date.now() + path.extname(file.originalname)
+      );
+    },
+  });
+
+  const upload = multer({
+    storage: storage,
+  }).single('bookCover');
+
+  upload(req, res, (err) => {
+    if (err) res.status(500).send(err.message);
+  });
+
   db.run(
-    'INSERT INTO books (title, author, genre, publicationYear) VALUES (?, ?, ?, ?)',
-    [title, author, genre, publicationYear],
+    'INSERT INTO books (title, author, genre, publicationYear, bookCover) VALUES (?, ?, ?, ?, ?)',
+    [title, author, genre, publicationYear, bookCover],
     (err) => {
       if (err) res.status(500).send(err.message);
     }

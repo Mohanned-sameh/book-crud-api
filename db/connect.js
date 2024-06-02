@@ -9,7 +9,7 @@ const db = new sqlite3.Database('./db/books.db', (err) => {
 // Create a table if it doesn't exist
 db.serialize(() => {
   db.run(
-    'CREATE TABLE IF NOT EXISTS books (id INTEGER PRIMARY KEY, title TEXT, author TEXT, genre TEXT, publicationYear INTEGER)'
+    'CREATE TABLE IF NOT EXISTS books (id INTEGER PRIMARY KEY, title TEXT, author TEXT, genre TEXT, publicationYear INTEGER, bookCover TEXT DEFAULT "https://via.placeholder.com/150")'
   );
 });
 
