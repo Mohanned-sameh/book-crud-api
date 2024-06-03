@@ -30,27 +30,9 @@ exports.addBook = (req, res) => {
   if (!title || !author || !genre || !publicationYear || !bookCover)
     res.status(400).send('Missing required fields');
 
-  const storage = multer.diskStorage({
-    destination: './public/images',
-    filename: (req, file, cb) => {
-      cb(
-        null,
-        file.fieldname + '-' + Date.now() + path.extname(file.originalname)
-      );
-    },
-  });
-
-  const upload = multer({
-    storage: storage,
-  }).single('bookCover');
-
-  upload(req, res, (err) => {
-    if (err) res.status(500).send(err.message);
-  });
-
   db.run(
-    'INSERT INTO books (title, author, genre, publicationYear, bookCover) VALUES (?, ?, ?, ?, ?)',
-    [title, author, genre, publicationYear, bookCover],
+    'INSERT INTO books (title, author, genre, publicationYear) VALUES (?, ?, ?, ?)',
+    [title, author, genre, publicationYear],
     (err) => {
       if (err) res.status(500).send(err.message);
     }
@@ -77,23 +59,11 @@ exports.updateBook = (req, res) => {
 
   if (isNaN(id)) res.status(400).send('Invalid ID');
 
-  const storage = multer.diskStorage({
-    destination: './public/images',
-    filename: (req, file, cb) => {
-      cb(
-        null,
-        file.fieldname + '-' + Date.now() + path.extname(file.originalname)
-      );
-    },
-  });
-
-  const upload = multer({
-    storage: storage,
-  }).single('bookCover');
-
+  if (!title || !author || !genre || !publicationYear || !bookCover)
+    res.status(400).send('Missing required fields');
   db.run(
-    'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ?, bookCover = ? WHERE id = ?',
-    [title, author, genre, publicationYear, bookCover, id],
+    'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
+    [title, author, genre, publicationYear, id],
     (err) => {
       if (err) res.status(500).send(err.message);
     }
