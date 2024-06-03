@@ -13,11 +13,6 @@ express.get('/', (req, res) => {
   getBooks(req, res);
 });
 
-express.post('/upload', (req, res) => {
-  // Upload a book cover
-  uploadBookCover(req, res);
-});
-
 express.post('/', (req, res) => {
   // Add a new book to the database
   addBook(req, res);
@@ -36,6 +31,16 @@ express.put('/:id', (req, res) => {
 express.delete('/:id', (req, res) => {
   // Delete a specific book from the database
   deleteBook(req, res);
+});
+
+express.post('/upload', (req, res) => {
+  // Upload a book cover
+  uploadBookCover(req, res);
+});
+
+express.get('/search', (req, res) => {
+  // Search for a book in the database
+  searchBook(req, res);
 });
 
 // Export the express router

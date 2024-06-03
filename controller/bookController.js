@@ -9,11 +9,6 @@ exports.getBooks = (req, res) => {
   let sql = 'SELECT * FROM books';
   let params = [];
 
-  if (search.trim() !== '') {
-    sql += ' WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?';
-    params = Array(3).fill(`%${search}%`);
-  }
-
   sql += ' LIMIT ? OFFSET ?';
   params.push(limit, offset);
 
@@ -55,12 +50,10 @@ exports.getBook = (req, res) => {
 // Update a specific book in the database
 exports.updateBook = (req, res) => {
   const { id } = req.params;
-  const { title, author, genre, publicationYear, bookCover } = req.body;
+  const { title, author, genre, publicationYear } = req.body;
 
   if (isNaN(id)) res.status(400).send('Invalid ID');
 
-  if (!title || !author || !genre || !publicationYear || !bookCover)
-    res.status(400).send('Missing required fields');
   db.run(
     'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
     [title, author, genre, publicationYear, id],
@@ -86,18 +79,48 @@ exports.deleteBook = (req, res) => {
 // Upload a book cover
 exports.uploadBookCover = (req, res) => {
   const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, path.join(__dirname, '../uploads'));
-    },
-    filename: function (req, file, cb) {
-      cb(null, file.fieldname + '-' + Date.now());
+    destination: './public/uploads/',
+    filename: (req, file, cb) => {
+      cb(
+        null,
+        `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+      );
     },
   });
 
-  const upload = multer({ storage }).single('bookCover');
+  const upload = multer({
+    storage,
+    limits: { fileSize: 1000000 },
+    fileFilter: (req, file, cb) => {
+      const filetypes = /jpeg|jpg|png|gif/;
+      const extname = filetypes.test(
+        path.extname(file.originalname).toLowerCase()
+      );
+      const mimetype = filetypes.test(file.mimetype);
+
+      if (mimetype && extname) return cb(null, true);
+      cb('Error: Images only types jpeg, jpg, png, gif!');
+    },
+  }).single('bookCover');
 
   upload(req, res, (err) => {
-    if (err) res.status(500).send(err.message);
-    res.send('Book cover uploaded');
+    if (err) res.status(400).send(err);
+    res.send(`uploads/${req.file.filename}`);
   });
+};
+
+// Search for a book in the database
+exports.searchBook = (req, res) => {
+  const { search = '' } = req.query;
+
+  if (search.trim() === '') res.status(400).send('Invalid search query');
+
+  db.all(
+    'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
+    [`%${search}%`, `%${search}%`, `%${search}%`],
+    (err, rows) => {
+      if (err) res.status(500).send(err.message);
+      res.json(rows);
+    }
+  );
 };
