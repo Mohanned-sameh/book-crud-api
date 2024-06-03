@@ -82,3 +82,22 @@ exports.deleteBook = (req, res) => {
   });
   res.send('Book deleted');
 };
+
+// Upload a book cover
+exports.uploadBookCover = (req, res) => {
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, path.join(__dirname, '../uploads'));
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.fieldname + '-' + Date.now());
+    },
+  });
+
+  const upload = multer({ storage }).single('bookCover');
+
+  upload(req, res, (err) => {
+    if (err) res.status(500).send(err.message);
+    res.send('Book cover uploaded');
+  });
+};

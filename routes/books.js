@@ -5,11 +5,17 @@ const {
   getBook,
   updateBook,
   deleteBook,
+  uploadBookCover,
 } = require('../controller/bookController');
 
 express.get('/', (req, res) => {
   // get all books from the database
   getBooks(req, res);
+});
+
+express.post('/upload', (req, res) => {
+  // Upload a book cover
+  uploadBookCover(req, res);
 });
 
 express.post('/', (req, res) => {
