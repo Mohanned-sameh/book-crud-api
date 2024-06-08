@@ -89,5 +89,5 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 
 ## Contact
 
-GitHub: (Mohanned sameh)[github.com/mohanned-sameh]
-LinkedIn: (Mohanned Sameh)[linkedin/in/mohanned-sameh]
+GitHub: [Mohanned sameh](github.com/mohanned-sameh)
+LinkedIn: [Mohanned Sameh](linkedin/in/mohanned-sameh)
