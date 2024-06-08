@@ -1,79 +1,134 @@
 const db = require('../db/connect');
 const multer = require('multer');
 const path = require('path');
+const Redis = require('ioredis');
+const redisClient = new Redis();
 
 // Get all books from the database
-exports.getBooks = (req, res) => {
-  const { search = '', limit = 10, offset = 0 } = req.query;
+exports.getBooks = async (req, res) => {
+  try {
+    const { search = '', limit = 10, offset = 0 } = req.query;
 
-  let sql = 'SELECT * FROM books';
-  let params = [];
+    let sql = 'SELECT * FROM books';
+    let params = [];
 
-  sql += ' LIMIT ? OFFSET ?';
-  params.push(limit, offset);
+    if (search.trim() !== '') {
+      sql += ' WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
 
-  db.all(sql, params, (err, rows) => {
-    if (err) res.status(500).send(err.message);
-    res.json(rows);
-  });
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const cacheKey = req.originalUrl || req.url;
+    const cacheData = await redisClient.get(cacheKey);
+
+    if (cacheData) {
+      return res.json(JSON.parse(cacheData));
+    }
+
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        return res.status(500).send(err.message);
+      }
+      redisClient.set(cacheKey, JSON.stringify(rows), 'EX', 3600); // Cache for 1 hour
+      res.json(rows);
+    });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };
 
 // Add a new book to the database
 exports.addBook = (req, res) => {
-  const { title, author, genre, publicationYear, bookCover } = req.body;
+  try {
+    const { title, author, genre, publicationYear, bookCover } = req.body;
 
-  if (!title || !author || !genre || !publicationYear || !bookCover)
-    res.status(400).send('Missing required fields');
-
-  db.run(
-    'INSERT INTO books (title, author, genre, publicationYear) VALUES (?, ?, ?, ?)',
-    [title, author, genre, publicationYear],
-    (err) => {
-      if (err) res.status(500).send(err.message);
+    if (!title || !author || !genre || !publicationYear || !bookCover) {
+      return res.status(400).send('Missing required fields');
     }
-  );
-  res.send('Book added');
+
+    db.run(
+      'INSERT INTO books (title, author, genre, publicationYear) VALUES (?, ?, ?, ?)',
+      [title, author, genre, publicationYear],
+      (err) => {
+        if (err) {
+          return res.status(500).send(err.message);
+        }
+        redisClient.del('/books');
+        res.send('Book added');
+      }
+    );
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };
 
 // Get a specific book from the database
 exports.getBook = (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  if (isNaN(id)) res.status(400).send('Invalid ID');
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid ID');
+    }
 
-  db.get('SELECT * FROM books WHERE id = ?', [id], (err, row) => {
-    if (err) res.status(500).send(err.message);
-    res.json(row);
-  });
+    db.get('SELECT * FROM books WHERE id = ?', [id], (err, row) => {
+      if (err) {
+        return res.status(500).send(err.message);
+      }
+      res.json(row);
+    });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };
 
 // Update a specific book in the database
 exports.updateBook = (req, res) => {
-  const { id } = req.params;
-  const { title, author, genre, publicationYear } = req.body;
+  try {
+    const { id } = req.params;
+    const { title, author, genre, publicationYear } = req.body;
 
-  if (isNaN(id)) res.status(400).send('Invalid ID');
-
-  db.run(
-    'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
-    [title, author, genre, publicationYear, id],
-    (err) => {
-      if (err) res.status(500).send(err.message);
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid ID');
     }
-  );
-  res.send('Book updated');
+
+    db.run(
+      'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
+      [title, author, genre, publicationYear, id],
+      (err) => {
+        if (err) {
+          return res.status(500).send(err.message);
+        }
+        redisClient.del(`/books/${id}`);
+        res.send('Book updated');
+      }
+    );
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };
 
 // Delete a specific book from the database
 exports.deleteBook = (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  if (isNaN(id)) res.status(400).send('Invalid ID');
+    if (isNaN(id)) {
+      return res.status(400).send('Invalid ID');
+    }
 
-  db.run('DELETE FROM books WHERE id = ?', [id], (err) => {
-    if (err) res.status(500).send(err.message);
-  });
-  res.send('Book deleted');
+    db.run('DELETE FROM books WHERE id = ?', [id], (err) => {
+      if (err) {
+        return res.status(500).send(err.message);
+      }
+      redisClient.del(`/books/${id}`);
+      res.send('Book deleted');
+    });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };
 
 // Upload a book cover
@@ -104,23 +159,33 @@ exports.uploadBookCover = (req, res) => {
   }).single('bookCover');
 
   upload(req, res, (err) => {
-    if (err) res.status(400).send(err);
+    if (err) {
+      return res.status(400).send(err);
+    }
     res.send(`uploads/${req.file.filename}`);
   });
 };
 
 // Search for a book in the database
 exports.searchBook = (req, res) => {
-  const { search = '' } = req.query;
+  try {
+    const { search = '' } = req.query;
 
-  if (search.trim() === '') res.status(400).send('Invalid search query');
-
-  db.all(
-    'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
-    [`%${search}%`, `%${search}%`, `%${search}%`],
-    (err, rows) => {
-      if (err) res.status(500).send(err.message);
-      res.json(rows);
+    if (search.trim() === '') {
+      return res.status(400).send('Invalid search query');
     }
-  );
+
+    db.all(
+      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
+      [`%${search}%`, `%${search}%`, `%${search}%`],
+      (err, rows) => {
+        if (err) {
+          return res.status(500).send(err.message);
+        }
+        res.json(rows);
+      }
+    );
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 };

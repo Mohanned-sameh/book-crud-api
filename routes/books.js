@@ -1,4 +1,5 @@
-const express = require('express').Router();
+const express = require('express');
+const router = express.Router();
 const {
   getBooks,
   addBook,
@@ -6,42 +7,21 @@ const {
   updateBook,
   deleteBook,
   uploadBookCover,
+  searchBook,
 } = require('../controller/bookController');
 
-express.get('/', (req, res) => {
-  // get all books from the database
-  getBooks(req, res);
-});
+router.get('/', getBooks);
 
-express.post('/', (req, res) => {
-  // Add a new book to the database
-  addBook(req, res);
-});
+router.post('/', addBook);
 
-express.get('/:id', (req, res) => {
-  // Get a specific book from the database
-  getBook(req, res);
-});
+router.get('/:id', getBook);
 
-express.put('/:id', (req, res) => {
-  // Update a specific book in the database
-  updateBook(req, res);
-});
+router.put('/:id', updateBook);
 
-express.delete('/:id', (req, res) => {
-  // Delete a specific book from the database
-  deleteBook(req, res);
-});
+router.delete('/:id', deleteBook);
 
-express.post('/upload', (req, res) => {
-  // Upload a book cover
-  uploadBookCover(req, res);
-});
+router.post('/upload', uploadBookCover);
 
-express.get('/search', (req, res) => {
-  // Search for a book in the database
-  searchBook(req, res);
-});
+router.get('/search', searchBook);
 
-// Export the express router
-module.exports = express;
+module.exports = router;

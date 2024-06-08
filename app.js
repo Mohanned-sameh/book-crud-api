@@ -1,6 +1,6 @@
 // Purpose: Main entry point for the application
 const express = require('express');
-const bodyparser = require('body-parser');
+const bodyParser = require('body-parser');
 const compression = require('compression');
 const cors = require('cors');
 
@@ -11,22 +11,18 @@ require('dotenv').config();
 const app = express();
 
 // Define the middleware
-app.use(cors());
+// app.use(cors());
 app.use(compression());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.json());
 
 // Define the port number
 const port = process.env.PORT || 3000;
-
-// Define the middleware
-app.use(bodyparser.urlencoded({ extended: false }));
-
-// Parse JSON bodies (as sent by API clients)
-app.use(express.json());
 
 // Define the routes
 app.use('/books', require('./routes/books'));
 
 // Start the server
 app.listen(port, () => {
-  console.log(`listening at http://localhost:${port}`);
+  console.log(`Server listening at http://localhost:${port}`);
 });
