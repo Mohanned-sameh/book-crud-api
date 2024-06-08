@@ -67,21 +67,21 @@ REDIS_PORT=6379`
 
 ## Project Structure
 
-- app.js: Main entry point for the application.
-- routes/books.js: Contains routes for the books endpoint.
-- controller/bookController.js: Controller for handling book-related logic, including CRUD operations, cover image uploads, and book searches.
-- db/connect.js: Connects to the SQLite database and creates a table if it doesn't exist.
-- .env: Environment variables configuration file.
+- `app.js`: Main entry point for the application.
+- `routes/books.js`: Contains routes for the books endpoint.
+- `controller/bookController.js`: Controller for handling book-related logic, including CRUD operations, cover image uploads, and book searches.
+- `db/connect.js`: Connects to the SQLite database and creates a table if it doesn't exist.
+- `.env`: Environment variables configuration file.
 
 ## Dependencies
 
-- express: Fast, unopinionated, minimalist web framework for Node.js.
-- body-parser: Parse incoming request bodies in a middleware before handlers.
-- compression: Node.js compression middleware.
-- dotenv: Loads environment variables from a .env file into process.env.
-- cors: Middleware for enabling Cross-Origin Resource Sharing (CORS).
-- multer: Middleware for handling multipart/form-data, used for uploading files.
-- ioredis: A robust, performance-focused Redis client for Node.js.
+- `express`: Fast, unopinionated, minimalist web framework for Node.js.
+- `body-parser`: Parse incoming request bodies in a middleware before handlers.
+- `compression`: Node.js compression middleware.
+- `dotenv`: Loads environment variables from a .env file into process.env.
+- `cors`: Middleware for enabling Cross-Origin Resource Sharing (CORS).
+- `multer`: Middleware for handling multipart/form-data, used for uploading files.
+- `ioredis`: A robust, performance-focused Redis client for Node.js.
 
 ## Contributing
 
