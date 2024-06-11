@@ -2,7 +2,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const compression = require('compression');
-const cors = require('cors');
+// const cors = require('cors');
 
 // Load the environment variables
 require('dotenv').config();
@@ -11,7 +11,7 @@ require('dotenv').config();
 const app = express();
 
 // Define the middleware
-app.use(cors());
+// app.use(cors());
 app.use(compression());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
@@ -22,6 +22,7 @@ const port = process.env.PORT || 3000;
 // Define the routes
 app.use('/books', require('./routes/books'));
 app.use('/auth', require('./routes/auth'));
+app.use('/genres', require('./routes/genre'));
 
 // Start the server
 app.listen(port, () => {

@@ -6,36 +6,40 @@ const redisClient = new Redis();
 
 // Get all books from the database
 exports.getBooks = async (req, res) => {
-  const { search = '', limit = 10, offset = 0 } = req.query;
+  try {
+    const { limit = 10, offset = 0 } = req.query;
+    const cacheKey = `/books?limit=${limit}&offset=${offset}`;
 
-  let sql = 'SELECT * FROM books WHERE userId = ?';
-  let params = [req.userId];
+    const cacheData = await redisClient.get(cacheKey);
 
-  sql += ' LIMIT ? OFFSET ?';
-  params.push(limit, offset);
+    if (cacheData) return res.json(JSON.parse(cacheData));
 
-  const cacheKey = req.originalURL || req.url;
-  const cacheData = await redisClient.get(cacheKey);
-
-  if (cacheData) return res.json(JSON.parse(cacheData));
-
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).send(err.message);
-    redisClient.set(cacheKey, JSON.stringify(rows));
-    res.json(rows);
-  });
+    db.all(
+      'SELECT * FROM books WHERE user_id = ? LIMIT ? OFFSET ?',
+      [req.userId, limit, offset],
+      (err, rows) => {
+        if (err) {
+          return res.status(500).send(err.message);
+        }
+        redisClient.set(cacheKey, JSON.stringify(rows));
+        res.json(rows);
+      }
+    );
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
 };
 
 exports.addBook = (req, res) => {
-  const { title, author, genre, publicationYear, bookCover } = req.body;
+  const { title, author, genre, bookCover } = req.body;
 
-  if (!title || !author || !genre || !publicationYear || !bookCover) {
+  if (!title || !author || !genre || !bookCover) {
     return res.status(400).send('Missing required fields');
   }
-
+  console.log(req.body);
   db.run(
-    'INSERT INTO books (title, author, genre, publicationYear, bookCover, userId) VALUES (?, ?, ?, ?, ?, ?)',
-    [title, author, genre, publicationYear, bookCover, req.userId],
+    'INSERT INTO books (title, author, genre_id, bookCover, user_id) VALUES (?, ?, ?, ?, ?)',
+    [title, author, genre, bookCover, req.userId],
     (err) => {
       if (err) return res.status(500).send(err.message);
       redisClient.del('/books');
@@ -52,7 +56,7 @@ exports.getBook = (req, res) => {
     if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.get(
-      'SELECT * FROM books WHERE id = ? AND userId = ?',
+      'SELECT * FROM books WHERE id = ? AND user_id = ?',
       [id, req.userId],
       (err, row) => {
         if (err) return res.status(500).send(err.message);
@@ -70,13 +74,13 @@ exports.getBook = (req, res) => {
 exports.updateBook = (req, res) => {
   try {
     const { id } = req.params;
-    const { title, author, genre, publicationYear } = req.body;
+    const { title, author, genre } = req.body;
 
     if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.run(
-      'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ? AND userId = ?',
-      [title, author, genre, publicationYear, id, req.userId],
+      'UPDATE books SET title = ?, author = ?, genre_id = ?, WHERE id = ? AND user_id = ?',
+      [title, author, genre, id, req.userId],
       (err) => {
         if (err) return res.status(500).send(err.message);
         redisClient.del(`/books/${id}`);
@@ -96,7 +100,7 @@ exports.deleteBook = (req, res) => {
     if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.run(
-      'DELETE FROM books WHERE id = ? AND userId = ?',
+      'DELETE FROM books WHERE id = ? AND user_id = ?',
       [id, req.userId],
       (err) => {
         if (err) return res.status(500).send(err.message);
@@ -154,7 +158,7 @@ exports.searchBook = async (req, res) => {
   if (cacheData) return res.json(JSON.parse(cacheData));
 
   db.all(
-    'SELECT * FROM books WHERE (title LIKE ? OR author LIKE ? OR genre LIKE ?) AND userId = ?',
+    'SELECT * FROM books WHERE (title LIKE ? OR author LIKE ?) AND user_id = ?',
     [`%${search}%`, `%${search}%`, `%${search}%`, req.userId],
     (err, rows) => {
       if (err) return res.status(500).send(err.message);
