@@ -8,23 +8,22 @@ const redisClient = new Redis();
 exports.getBooks = async (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
-    const cacheKey = `/books?limit=${limit}&offset=${offset}`;
 
-    const cacheData = await redisClient.get(cacheKey);
+    const cacheData = await redisClient.get(
+      `/books?limit=${limit}&offset=${offset}`
+    );
 
     if (
       cacheData ==
-      db.all('SELECT * FROM books WHERE user_id = ? LIMIT ? OFFSET ?', [
-        req.userId,
-        limit,
-        offset,
-      ])
+      db.all(
+        `SELECT * FROM books WHERE user_id = ${req.userId} LIMIT ${limit} OFFSET ${offset}`
+      )
     ) {
       return res.json(JSON.parse(cacheData));
     }
 
     db.all(
-      'SELECT * FROM books WHERE user_id = ? LIMIT ? OFFSET ?',
+      `SELECT * FROM books WHERE user_id = ${req.userId} LIMIT ${limit} OFFSET ${offset}`,
       [req.userId, limit, offset],
       (err, rows) => {
         if (err) {
@@ -161,14 +160,12 @@ exports.uploadBookCover = (req, res) => {
 exports.searchBook = async (req, res) => {
   const { search = '' } = req.query;
 
-  const cacheKey = `/books/search?search=${search}`;
-  const cacheData = await redisClient.get(cacheKey);
+  const cacheData = await redisClient.get(`/books/search?search=${search}`);
 
   if (cacheData) return res.json(JSON.parse(cacheData));
 
   db.all(
-    'SELECT * FROM books WHERE (title LIKE ? OR author LIKE ?) AND user_id = ?',
-    [`%${search}%`, `%${search}%`, `%${search}%`, req.userId],
+    `SELECT * FROM books WHERE title LIKE '%${search}%' AND user_id = ${req.userId}`,
     (err, rows) => {
       if (err) return res.status(500).send(err.message);
       redisClient.set(cacheKey, JSON.stringify(rows));
