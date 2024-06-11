@@ -6,62 +6,42 @@ const redisClient = new Redis();
 
 // Get all books from the database
 exports.getBooks = async (req, res) => {
-  try {
-    const { search = '', limit = 10, offset = 0 } = req.query;
+  const { search = '', limit = 10, offset = 0 } = req.query;
 
-    let sql = 'SELECT * FROM books';
-    let params = [];
+  let sql = 'SELECT * FROM books WHERE userId = ?';
+  let params = [req.userId];
 
-    if (search.trim() !== '') {
-      sql += ' WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
+  sql += ' LIMIT ? OFFSET ?';
+  params.push(limit, offset);
 
-    sql += ' LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+  const cacheKey = req.originalURL || req.url;
+  const cacheData = await redisClient.get(cacheKey);
 
-    const cacheKey = req.originalUrl || req.url;
-    const cacheData = await redisClient.get(cacheKey);
-
-    if (cacheData) {
-      return res.json(JSON.parse(cacheData));
-    }
-
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-      redisClient.set(cacheKey, JSON.stringify(rows), 'EX', 3600); // Cache for 1 hour
-      res.json(rows);
-    });
-  } catch (error) {
-    res.status(500).send(error.message);
+  if (cacheData) {
+    return res.json(JSON.parse(cacheData));
   }
+  db.all(sql, params, (err, rows) => {
+    if (err) res.status(500).send(err.message);
+    redisClient.set(cacheKey, JSON.stringify(rows));
+    res.json(rows);
+  });
 };
 
-// Add a new book to the database
 exports.addBook = (req, res) => {
-  try {
-    const { title, author, genre, publicationYear, bookCover } = req.body;
+  const { title, author, genre, publicationYear, bookCover } = req.body;
 
-    if (!title || !author || !genre || !publicationYear || !bookCover) {
-      return res.status(400).send('Missing required fields');
+  if (!title || !author || !genre || !publicationYear || !bookCover)
+    res.status(400).send('Missing required fields');
+
+  db.run(
+    'INSERT INTO books (title, author, genre, publicationYear, bookCover, userId) VALUES (?, ?, ?, ?, ?, ?)',
+    [title, author, genre, publicationYear, bookCover, req.userId],
+    (err) => {
+      if (err) res.status(500).send(err.message);
     }
-
-    db.run(
-      'INSERT INTO books (title, author, genre, publicationYear) VALUES (?, ?, ?, ?)',
-      [title, author, genre, publicationYear],
-      (err) => {
-        if (err) {
-          return res.status(500).send(err.message);
-        }
-        redisClient.del('/books');
-        res.send('Book added');
-      }
-    );
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+  );
+  redisClient.del('/books');
+  res.send('Book added');
 };
 
 // Get a specific book from the database
@@ -76,6 +56,9 @@ exports.getBook = (req, res) => {
     db.get('SELECT * FROM books WHERE id = ?', [id], (err, row) => {
       if (err) {
         return res.status(500).send(err.message);
+      }
+      if (!row) {
+        return res.status(404).send('Book not found');
       }
       res.json(row);
     });
@@ -145,7 +128,6 @@ exports.uploadBookCover = (req, res) => {
 
   const upload = multer({
     storage,
-    limits: { fileSize: 1000000 },
     fileFilter: (req, file, cb) => {
       const filetypes = /jpeg|jpg|png|gif/;
       const extname = filetypes.test(
@@ -153,39 +135,36 @@ exports.uploadBookCover = (req, res) => {
       );
       const mimetype = filetypes.test(file.mimetype);
 
-      if (mimetype && extname) return cb(null, true);
-      cb('Error: Images only types jpeg, jpg, png, gif!');
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      cb('Error: Images only!');
     },
   }).single('bookCover');
 
   upload(req, res, (err) => {
     if (err) {
-      return res.status(400).send(err);
+      res.status(400).send(err.message);
+    } else {
+      res.send(
+        `/${req.file.path.replace(/\\/g, '/').replace('public', 'uploads')}`
+      );
     }
-    res.send(`uploads/${req.file.filename}`);
   });
 };
 
 // Search for a book in the database
 exports.searchBook = (req, res) => {
-  try {
-    const { search = '' } = req.query;
+  const { search = '' } = req.query;
 
-    if (search.trim() === '') {
-      return res.status(400).send('Invalid search query');
-    }
-
-    db.all(
-      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
-      [`%${search}%`, `%${search}%`, `%${search}%`],
-      (err, rows) => {
-        if (err) {
-          return res.status(500).send(err.message);
-        }
-        res.json(rows);
+  db.all(
+    'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
+    [`%${search}%`, `%${search}%`, `%${search}%`],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).send(err.message);
       }
-    );
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+      res.json(rows);
+    }
+  );
 };

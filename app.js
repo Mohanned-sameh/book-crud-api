@@ -21,6 +21,7 @@ const port = process.env.PORT || 3000;
 
 // Define the routes
 app.use('/books', require('./routes/books'));
+app.use('/auth', require('./routes/auth'));
 
 // Start the server
 app.listen(port, () => {
