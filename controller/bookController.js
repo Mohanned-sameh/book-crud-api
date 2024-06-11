@@ -20,7 +20,7 @@ exports.getBooks = async (req, res) => {
   if (cacheData) return res.json(JSON.parse(cacheData));
 
   db.all(sql, params, (err, rows) => {
-    if (err) res.status(500).send(err.message);
+    if (err) return res.status(500).send(err.message);
     redisClient.set(cacheKey, JSON.stringify(rows));
     res.json(rows);
   });
@@ -29,18 +29,19 @@ exports.getBooks = async (req, res) => {
 exports.addBook = (req, res) => {
   const { title, author, genre, publicationYear, bookCover } = req.body;
 
-  if (!title || !author || !genre || !publicationYear || !bookCover)
-    res.status(400).send('Missing required fields');
+  if (!title || !author || !genre || !publicationYear || !bookCover) {
+    return res.status(400).send('Missing required fields');
+  }
 
   db.run(
     'INSERT INTO books (title, author, genre, publicationYear, bookCover, userId) VALUES (?, ?, ?, ?, ?, ?)',
     [title, author, genre, publicationYear, bookCover, req.userId],
     (err) => {
-      if (err) res.status(500).send(err.message);
+      if (err) return res.status(500).send(err.message);
+      redisClient.del('/books');
+      res.send('Book added');
     }
   );
-  redisClient.del('/books');
-  res.send('Book added');
 };
 
 // Get a specific book from the database
@@ -50,12 +51,16 @@ exports.getBook = (req, res) => {
 
     if (isNaN(id)) return res.status(400).send('Invalid ID');
 
-    db.get('SELECT * FROM books WHERE id = ?', [id], (err, row) => {
-      if (err) return res.status(500).send(err.message);
-      if (!row) return res.status(404).send('Book not found');
+    db.get(
+      'SELECT * FROM books WHERE id = ? AND userId = ?',
+      [id, req.userId],
+      (err, row) => {
+        if (err) return res.status(500).send(err.message);
+        if (!row) return res.status(404).send('Book not found');
 
-      res.json(row);
-    });
+        res.json(row);
+      }
+    );
   } catch (error) {
     res.status(500).send(error.message);
   }
@@ -70,8 +75,8 @@ exports.updateBook = (req, res) => {
     if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.run(
-      'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
-      [title, author, genre, publicationYear, id],
+      'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ? AND userId = ?',
+      [title, author, genre, publicationYear, id, req.userId],
       (err) => {
         if (err) return res.status(500).send(err.message);
         redisClient.del(`/books/${id}`);
@@ -90,12 +95,16 @@ exports.deleteBook = (req, res) => {
 
     if (isNaN(id)) return res.status(400).send('Invalid ID');
 
-    db.run('DELETE FROM books WHERE id = ?', [id], (err) => {
-      if (err) return res.status(500).send(err.message);
+    db.run(
+      'DELETE FROM books WHERE id = ? AND userId = ?',
+      [id, req.userId],
+      (err) => {
+        if (err) return res.status(500).send(err.message);
 
-      redisClient.del(`/books/${id}`);
-      res.send('Book deleted');
-    });
+        redisClient.del(`/books/${id}`);
+        res.send('Book deleted');
+      }
+    );
   } catch (error) {
     res.status(500).send(error.message);
   }
@@ -128,23 +137,28 @@ exports.uploadBookCover = (req, res) => {
   }).single('bookCover');
 
   upload(req, res, (err) => {
-    if (err) res.status(400).send(err.message);
-    else
-      res.send(
-        `/${req.file.path.replace(/\\/g, '/').replace('public', 'uploads')}`
-      );
+    if (err) return res.status(400).send(err.message);
+    res.send(
+      `/${req.file.path.replace(/\\/g, '/').replace('public', 'uploads')}`
+    );
   });
 };
 
 // Search for a book in the database
-exports.searchBook = (req, res) => {
+exports.searchBook = async (req, res) => {
   const { search = '' } = req.query;
 
+  const cacheKey = `/books/search?search=${search}`;
+  const cacheData = await redisClient.get(cacheKey);
+
+  if (cacheData) return res.json(JSON.parse(cacheData));
+
   db.all(
-    'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
-    [`%${search}%`, `%${search}%`, `%${search}%`],
+    'SELECT * FROM books WHERE (title LIKE ? OR author LIKE ? OR genre LIKE ?) AND userId = ?',
+    [`%${search}%`, `%${search}%`, `%${search}%`, req.userId],
     (err, rows) => {
       if (err) return res.status(500).send(err.message);
+      redisClient.set(cacheKey, JSON.stringify(rows));
       res.json(rows);
     }
   );

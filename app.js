@@ -11,7 +11,7 @@ require('dotenv').config();
 const app = express();
 
 // Define the middleware
-app.use(cors());
+// app.use(cors());
 app.use(compression());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
