@@ -17,9 +17,8 @@ exports.getBooks = async (req, res) => {
   const cacheKey = req.originalURL || req.url;
   const cacheData = await redisClient.get(cacheKey);
 
-  if (cacheData) {
-    return res.json(JSON.parse(cacheData));
-  }
+  if (cacheData) return res.json(JSON.parse(cacheData));
+
   db.all(sql, params, (err, rows) => {
     if (err) res.status(500).send(err.message);
     redisClient.set(cacheKey, JSON.stringify(rows));
@@ -49,17 +48,12 @@ exports.getBook = (req, res) => {
   try {
     const { id } = req.params;
 
-    if (isNaN(id)) {
-      return res.status(400).send('Invalid ID');
-    }
+    if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.get('SELECT * FROM books WHERE id = ?', [id], (err, row) => {
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-      if (!row) {
-        return res.status(404).send('Book not found');
-      }
+      if (err) return res.status(500).send(err.message);
+      if (!row) return res.status(404).send('Book not found');
+
       res.json(row);
     });
   } catch (error) {
@@ -73,17 +67,13 @@ exports.updateBook = (req, res) => {
     const { id } = req.params;
     const { title, author, genre, publicationYear } = req.body;
 
-    if (isNaN(id)) {
-      return res.status(400).send('Invalid ID');
-    }
+    if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.run(
       'UPDATE books SET title = ?, author = ?, genre = ?, publicationYear = ? WHERE id = ?',
       [title, author, genre, publicationYear, id],
       (err) => {
-        if (err) {
-          return res.status(500).send(err.message);
-        }
+        if (err) return res.status(500).send(err.message);
         redisClient.del(`/books/${id}`);
         res.send('Book updated');
       }
@@ -98,14 +88,11 @@ exports.deleteBook = (req, res) => {
   try {
     const { id } = req.params;
 
-    if (isNaN(id)) {
-      return res.status(400).send('Invalid ID');
-    }
+    if (isNaN(id)) return res.status(400).send('Invalid ID');
 
     db.run('DELETE FROM books WHERE id = ?', [id], (err) => {
-      if (err) {
-        return res.status(500).send(err.message);
-      }
+      if (err) return res.status(500).send(err.message);
+
       redisClient.del(`/books/${id}`);
       res.send('Book deleted');
     });
@@ -135,21 +122,17 @@ exports.uploadBookCover = (req, res) => {
       );
       const mimetype = filetypes.test(file.mimetype);
 
-      if (mimetype && extname) {
-        return cb(null, true);
-      }
+      if (mimetype && extname) return cb(null, true);
       cb('Error: Images only!');
     },
   }).single('bookCover');
 
   upload(req, res, (err) => {
-    if (err) {
-      res.status(400).send(err.message);
-    } else {
+    if (err) res.status(400).send(err.message);
+    else
       res.send(
         `/${req.file.path.replace(/\\/g, '/').replace('public', 'uploads')}`
       );
-    }
   });
 };
 
@@ -161,9 +144,7 @@ exports.searchBook = (req, res) => {
     'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR genre LIKE ?',
     [`%${search}%`, `%${search}%`, `%${search}%`],
     (err, rows) => {
-      if (err) {
-        return res.status(500).send(err.message);
-      }
+      if (err) return res.status(500).send(err.message);
       res.json(rows);
     }
   );

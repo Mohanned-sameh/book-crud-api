@@ -1,5 +1,4 @@
 const express = require('express');
-const router = express.Router();
 const {
   getBooks,
   addBook,
@@ -7,21 +6,36 @@ const {
   updateBook,
   deleteBook,
   uploadBookCover,
-  searchBook,
 } = require('../controller/bookController');
+const auth = require('../middleware/auth');
+const router = express.Router();
 
-router.get('/', getBooks);
+router.get('/', auth, (req, res) => {
+  getBooks(req, res);
+});
 
-router.post('/', addBook);
+router.post('/', auth, (req, res) => {
+  addBook(req, res);
+});
 
-router.get('/:id', getBook);
+router.get('/:id', auth, (req, res) => {
+  getBook(req, res);
+});
 
-router.put('/:id', updateBook);
+router.put('/:id', auth, (req, res) => {
+  updateBook(req, res);
+});
 
-router.delete('/:id', deleteBook);
+router.delete('/:id', auth, (req, res) => {
+  deleteBook(req, res);
+});
 
-router.post('/upload', uploadBookCover);
+router.post('/upload', auth, (req, res) => {
+  uploadBookCover(req, res);
+});
 
-router.get('/search', searchBook);
+router.get('/search', auth, (req, res) => {
+  searchBook(req, res);
+});
 
 module.exports = router;
