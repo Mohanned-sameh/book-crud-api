@@ -12,7 +12,16 @@ exports.getBooks = async (req, res) => {
 
     const cacheData = await redisClient.get(cacheKey);
 
-    if (cacheData) return res.json(JSON.parse(cacheData));
+    if (
+      cacheData ==
+      db.all('SELECT * FROM books WHERE user_id = ? LIMIT ? OFFSET ?', [
+        req.userId,
+        limit,
+        offset,
+      ])
+    ) {
+      return res.json(JSON.parse(cacheData));
+    }
 
     db.all(
       'SELECT * FROM books WHERE user_id = ? LIMIT ? OFFSET ?',
@@ -31,21 +40,21 @@ exports.getBooks = async (req, res) => {
 };
 
 exports.addBook = (req, res) => {
-  const { title, author, genre, bookCover } = req.body;
+  try {
+    const { title, author, genre } = req.body;
 
-  if (!title || !author || !genre || !bookCover) {
-    return res.status(400).send('Missing required fields');
+    db.run(
+      'INSERT INTO books (title, author, genre_id, user_id) VALUES (?, ?, ?, ?)',
+      [title, author, genre, req.userId],
+      (err) => {
+        if (err) return res.status(500).send(err.message);
+        redisClient.delete(cacheKey);
+        res.send('Book added');
+      }
+    );
+  } catch (error) {
+    res.status(500).send(error.message);
   }
-  console.log(req.body);
-  db.run(
-    'INSERT INTO books (title, author, genre_id, bookCover, user_id) VALUES (?, ?, ?, ?, ?)',
-    [title, author, genre, bookCover, req.userId],
-    (err) => {
-      if (err) return res.status(500).send(err.message);
-      redisClient.del('/books');
-      res.send('Book added');
-    }
-  );
 };
 
 // Get a specific book from the database
