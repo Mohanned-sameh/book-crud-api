@@ -4,6 +4,7 @@ const db = require('../db/connect');
 
 exports.register = (req, res) => {
   const { username, password } = req.body;
+  console.log(req.body);
   if (!username || !password)
     return res.status(400).send('Missing required fields');
 
